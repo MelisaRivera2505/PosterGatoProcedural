@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proyecto de Computación Gráfica - Máquina de Estados</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a35 50%, #0f0f1e 100%);
+            color: #e5e5dc;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(240, 179, 90, 0.04) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(166, 60, 40, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Header y título */
+        .header {
+            text-align: center;
+            padding: 2rem 2rem 1rem;
+            background: linear-gradient(180deg, rgba(15, 15, 30, 0.95) 0%, rgba(26, 26, 53, 0.5) 100%);
+            position: relative;
+            border-bottom: 1px solid rgba(240, 179, 90, 0.15);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Contenedor principal */
+        .container {
+            flex: 1;
+            max-width: 1650px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 4rem 2rem;
+        }
+
+        /* Grid de tres columnas */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1.8fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* Columna izquierda - Problemas y soluciones */
+        .left-column {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.85) 0%, rgba(36, 36, 62, 0.55) 100%);
+            padding: 3rem;
+            border-radius: 18px;
+            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(240, 179, 90, 0.18);
+            backdrop-filter: blur(12px);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .left-column:hover {
+            background: linear-gradient(135deg, rgba(36, 36, 62, 0.95) 0%, rgba(46, 46, 80, 0.65) 100%);
+            border-color: rgba(240, 179, 90, 0.35);
+            box-shadow: 0 20px 80px rgba(166, 60, 40, 0.15),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            transform: translateY(-6px);
+        }
+
+        .left-column h3 {
+            font-size: 20px;
+            margin-bottom: 2.2rem;
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.6px;
+        }
+
+        .left-column ul {
+            list-style: none;
+            margin-bottom: 2.5rem;
+        }
+
+        .left-column li {
+            margin-bottom: 2.5rem;
+            padding-left: 2.5rem;
+            position: relative;
+            font-size: 15px;
+            line-height: 1.85;
+            color: #d1d1c6;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .left-column li:hover {
+            color: #e5e5dc;
+            transform: translateX(8px);
+        }
+
+        .left-column li::before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #ffd89b;
+            font-size: 10px;
+            top: 3px;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .left-column li.expanded::before {
+            transform: rotate(90deg);
+        }
+
+        .left-column li:hover::before {
+            color: #f0b35a;
+            opacity: 1;
+            transform: scale(1.3);
+        }
+
+        .left-column li.expanded:hover::before {
+            transform: rotate(90deg) scale(1.3);
+        }
+
+        .solution-content {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 200, 118, 0.08);
+            border-left: 3px solid #ffd89b;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.8;
+            color: #e0e0d5;
+            animation: slideDown 0.3s ease;
+        }
+
+        .solution-content.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .left-column p {
+            font-size: 15px;
+            margin-bottom: 2rem;
+            color: #c9c9bf;
+            line-height: 1.85;
+        }
+
+        .doc-link {
+            display: inline-block;
+            margin-top: 2.5rem;
+            padding: 15px 36px;
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            color: #0b0b14;
+            text-decoration: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 15px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 12px 32px rgba(240, 179, 90, 0.35),
+                        0 0 30px rgba(166, 60, 40, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.6px;
+        }
+
+        .doc-link::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .doc-link:hover {
+            background: linear-gradient(135deg, #f0b35a 0%, #ffc876 100%);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(240, 179, 90, 0.45),
+                        0 0 40px rgba(166, 60, 40, 0.25);
+        }
+
+        .doc-link:hover::before {
+            left: 100%;
+        }
+
+        /* Columna central - Póster */
+        .center-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 2.5rem;
+        }
+
+        .center-column p {
+            font-size: 16px;
+            color: #d1d1c6;
+            max-width: 650px;
+            margin: 0 auto;
+            font-weight: 300;
+            line-height: 1.85;
+            letter-spacing: 0.3px;
+            text-align: left;
+            width: 100%;
+            order: 1;
+        }
+
+        .poster {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 22px;
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55),
+                        0 0 80px rgba(240, 179, 90, 0.2),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: 2px solid rgba(240, 179, 90, 0.25);
+            position: relative;
+            order: 0;
+        }
+
+        .poster::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
+            z-index: 1;
+            pointer-events: none;
+            border-radius: 22px;
+        }
+
+        .poster h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 45px;
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-align: center;
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            z-index: 2;
+            margin: 0;
+            line-height: 1.3;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
+            pointer-events: none;
+        }
+
+        .poster img {
+            width: 100%;
+            z-index: 1;
+            height: auto;
+            display: block;
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+
+        .poster:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6),
+                        0 0 100px rgba(240, 179, 90, 0.3),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.18);
+            border-color: rgba(240, 179, 90, 0.45);
+        }
+
+        .poster:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Columna derecha - GIFs */
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .gif-container {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.85) 0%, rgba(36, 36, 62, 0.55) 100%);
+            padding: 1.8rem;
+            border-radius: 18px;
+            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(240, 179, 90, 0.18);
+            text-align: center;
+            backdrop-filter: blur(12px);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .gif-container:hover {
+            background: linear-gradient(135deg, rgba(36, 36, 62, 0.95) 0%, rgba(46, 46, 80, 0.65) 100%);
+            border-color: rgba(240, 179, 90, 0.35);
+            box-shadow: 0 20px 80px rgba(166, 60, 40, 0.15),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.15);
+            transform: translateY(-6px);
+        }
+
+        .gif-container h3 {
+            font-size: 20px;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+
+        .gif-media {
+            width: 100%;
+            height: 270px;
+            background: linear-gradient(135deg, rgba(15, 15, 35, 0.9) 0%, rgba(26, 26, 52, 0.7) 100%);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.8rem;
+            overflow: hidden;
+            border: 1px solid rgba(240, 179, 90, 0.18);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .gif-media::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent);
+            pointer-events: none;
+            border-radius: 14px;
+        }
+
+        .gif-container:hover .gif-media {
+            border-color: rgba(240, 179, 90, 0.35);
+            box-shadow: inset 0 0 30px rgba(240, 179, 90, 0.12);
+        }
+
+        .gif-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .gif-container:hover .gif-media img {
+            transform: scale(1.08);
+        }
+
+        .toggle-btn {
+            width: 100%;
+            padding: 13px 20px;
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            color: #0b0b14;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 8px 24px rgba(240, 179, 90, 0.3);
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 0.4px;
+        }
+
+        .toggle-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.7s, height 0.7s;
+            z-index: 0;
+        }
+
+        .toggle-btn:hover {
+            background: linear-gradient(135deg, #f0b35a 0%, #ffc876 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(240, 179, 90, 0.45);
+        }
+
+        .toggle-btn:active::before {
+            width: 400px;
+            height: 400px;
+        }
+
+        .toggle-btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(180deg, rgba(15, 15, 30, 0.5) 0%, rgba(10, 10, 20, 0.9) 100%);
+            border-top: 1px solid rgba(240, 179, 90, 0.18);
+            padding: 3.5rem 2rem;
+            text-align: center;
+            margin-top: 0;
+            width: 100%;
+            backdrop-filter: blur(12px);
+        }
+
+        .footer-content {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .footer-content p {
+            font-size: 15px;
+            color: #d1d1c6;
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+
+        .footer-content p strong {
+            background: linear-gradient(135deg, #ffc876 0%, #f0b35a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 3.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: #ffc876;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            letter-spacing: 0.3px;
+        }
+
+        .footer-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #ffc876, #f0b35a);
+            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .footer-links a:hover {
+            color: #f0b35a;
+        }
+
+        .footer-links a:hover::after {
+            width: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .header h1 {
+                font-size: 44px;
+            }
+
+            .container {
+                padding: 3rem 1.5rem;
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+
+            .left-column {
+                order: 3;
+            }
+
+            .center-column {
+                order: 1;
+            }
+
+            .poster h1 {
+                font-size: 42px;
+            }
+
+            .right-column {
+                order: 2;
+                flex-direction: row;
+            }
+
+            .gif-container {
+                flex: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1.5rem 1.5rem 1rem;
+            }
+
+            .header h1 {
+                font-size: 38px;
+                margin-bottom: 0.8rem;
+            }
+
+            .header p {
+                font-size: 15px;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .main-content {
+                gap: 2rem;
+            }
+
+            .poster h1 {
+                font-size: 36px;
+            }
+
+            .center-column p {
+                font-size: 15px;
+            }
+
+            .left-column,
+            .gif-container {
+                padding: 2rem;
+            }
+
+            .left-column h3 {
+                font-size: 24px;
+            }
+
+            .left-column li {
+                font-size: 14px;
+                margin-bottom: 1.4rem;
+            }
+
+            .right-column {
+                flex-direction: column;
+            }
+
+            .gif-media {
+                height: 240px;
+            }
+
+            .footer-links {
+                gap: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 32px;
+                margin-bottom: 0.6rem;
+            }
+
+            .header p {
+                font-size: 14px;
+                line-height: 1.7;
+            }
+
+            .container {
+                padding: 1.5rem 0.75rem;
+            }
+
+            .poster h1 {
+                font-size: 28px;
+            }
+
+            .center-column p {
+                font-size: 13px;
+                max-width: 100%;
+            }
+
+            .left-column,
+            .gif-container {
+                padding: 1.5rem;
+            }
+
+            .left-column h3 {
+                font-size: 22px;
+                margin-bottom: 1.5rem;
+            }
+
+            .left-column li {
+                font-size: 13px;
+                margin-bottom: 1.2rem;
+                padding-left: 1.8rem;
+            }
+
+            .left-column li::before {
+                font-size: 10px;
+            }
+
+            .doc-link {
+                padding: 12px 24px;
+                font-size: 13px;
+                margin-top: 1.5rem;
+                border-radius: 10px;
+            }
+
+            .poster {
+                max-width: 100%;
+                border-radius: 16px;
+            }
+
+            .gif-media {
+                height: 200px;
+                margin-bottom: 1.2rem;
+                border-radius: 12px;
+            }
+
+            .toggle-btn {
+                font-size: 13px;
+                padding: 11px 16px;
+                border-radius: 10px;
+            }
+
+            .footer {
+                padding: 2.5rem 1.5rem;
+                margin-top: 3rem;
+            }
+
+            .footer-content p {
+                font-size: 13px;
+                margin-bottom: 1rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+    </div>
+
+    <!-- Contenedor principal -->
+    <div class="container">
+        <div class="main-content">
+            <!-- Columna izquierda -->
+            <div class="left-column">
+                <h3>Problemas y Soluciones</h3>
+                <ul>
+                    <li class="problem-item" onclick="toggleSolution(this)">
+                        <strong>Inestabilidad en la locomoción</strong>
+                        <div class="solution-content">
+                            Ajustar posiciones de las patas en tiempo real generaba vibraciones y pasos imposibles. Se solucionó validando anatómicamente cada movimiento y utilizando trayectorias parabólicas para levantar y apoyar cada pata de forma natural.
+                        </div>
+                    </li>
+
+                    <li class="problem-item" onclick="toggleSolution(this)">
+                        <strong>Coordinación entre patas</strong>
+                        <div class="solution-content">
+                            El movimiento independiente causaba desbalanceo. Se implementó un patrón de marcha secuencial dividido en estados (PASO_1 a PASO_5) que garantiza estabilidad felina.
+                        </div>
+                    </li>
+
+                    <li class="problem-item" onclick="toggleSolution(this)">
+                        <strong>Transiciones incorrectas entre caminar, correr y saltar</strong>
+                        <div class="solution-content">
+                            El gato podía solicitar acciones incompatibles. Una máquina de estados estricta asegura que cada transición sea válida antes de ejecutarla.
+                        </div>
+                    </li>
+
+                    <li class="problem-item" onclick="toggleSolution(this)">
+                        <strong>Detección de terreno imprecisa</strong>
+                        <div class="solution-content">
+                            El gato atravesaba el suelo o no alcanzaba alturas adecuadas. Se mejoró con raycasting direccional y selección automática del punto más viable para cada pata.
+                        </div>
+                    </li>
+
+                    <li class="problem-item" onclick="toggleSolution(this)">
+                        <strong>Movimientos no naturales</strong>
+                        <div class="solution-content">
+                            Los giros y ajustes bruscos generaban animaciones poco orgánicas. Se añadió interpolación suave en la orientación y un sistema de columna basado en física de resorte para suavizar la postura.
+                        </div>
+                    </li>
+                </ul>
+
+                <p>
+                    <strong>Resultados:</strong> Locomoción coherente y completamente procedural, adaptable a cualquier superficie, con movimientos felinos naturales generados mediante cálculo matemático e inteligencia comportamental.
+                </p>
+            </div>
+
+            <!-- Columna central -->
+            <div class="center-column">
+                <div class="poster">
+                    <h1>La Vida de un Gato Procedural</h1>
+                    <img src="assets/images/poster.png" alt="Póster del proyecto - Gato Procedural">
+                </div>
+
+                <p>
+                    Este proyecto implementa la locomoción y el comportamiento de un gato completamente procedural, sin animaciones pregrabadas. La simulación se basa en una máquina de estados finitos que controla caminar, correr y saltar, combinada con un sistema de inverse kinematics que ajusta dinámicamente cada pata, la columna y la cola. Todos los movimientos se calculan en tiempo real siguiendo un punto objetivo y manteniendo coherencia anatómica.
+                </p>
+            </div>
+
+            <!-- Columna derecha -->
+            <div class="right-column">
+                <!-- GIF 1: Caminata -->
+                <div class="gif-container">
+                    <h3>Caminata</h3>
+                    <div class="gif-media">
+                        <img src="assets/gifs/walk.gif" alt="Animación de caminata" class="gif-image" data-gif="walk" data-original="assets/gifs/walk.gif" data-state="assets/images/walk_state.png">
+                    </div>
+                    <button class="toggle-btn" onclick="toggleImage('walk')"><span>Mostrar Máquina de Estados</span></button>
+                </div>
+
+                <!-- GIF 2: Salto -->
+                <div class="gif-container">
+                    <h3>Salto</h3>
+                    <div class="gif-media">
+                        <img src="assets/gifs/jump.gif" alt="Animación de salto" class="gif-image" data-gif="jump" data-original="assets/gifs/jump.gif" data-state="assets/images/jump_state.png">
+                    </div>
+                    <button class="toggle-btn" onclick="toggleImage('jump')"><span>Mostrar Máquina de Estados</span></button>
+                </div>
+
+                <!-- GIF 3: Correr -->
+                <div class="gif-container">
+                    <h3>Correr</h3>
+                    <div class="gif-media">
+                        <img src="assets/gifs/run.gif" alt="Animación de carrera" class="gif-image" data-gif="run" data-original="assets/gifs/run.gif" data-state="assets/images/run_state.png">
+                    </div>
+                    <button class="toggle-btn" onclick="toggleImage('run')"><span>Mostrar Máquina de Estados</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-content">
+            <p><strong>La Vida de un Gato Procedural</strong></p>
+            <p>Autores: Cesar Perales y Melisa Rivera | © 2025</p>
+            <div class="footer-links">
+                <a href="https://de.com/CesarAP24/cat_proj_test03" target="_blank">GitHub</a>
+                <a href="assets/docs/documentacion.pdf" download>Documentación</a>
+                <a href="mailto:melisa.rivera@gmail.com">Contacto</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Estado de cada imagen
+        const imageState = {
+            walk: false,
+            jump: false,
+            run: false
+        };
+
+        /**
+         * Alterna entre la imagen GIF y la máquina de estados
+         * @param {string} gifName - Nombre del GIF (walk, jump, run)
+         */
+        function toggleImage(gifName) {
+            const img = document.querySelector(`[data-gif="${gifName}"]`);
+            const btn = event.target.closest('button');
+
+            if (!imageState[gifName]) {
+                img.src = img.dataset.state;
+                btn.innerHTML = '<span>Mostrar GIF</span>';
+                imageState[gifName] = true;
+            } else {
+                img.src = img.dataset.original;
+                btn.innerHTML = '<span>Mostrar Máquina de Estados</span>';
+                imageState[gifName] = false;
+            }
+        }
+
+        /**
+         * Expande o contrae el contenido de la solución
+         * @param {HTMLElement} element - El elemento li clickeado
+         */
+        function toggleSolution(element) {
+            element.classList.toggle('expanded');
+            const solutionContent = element.querySelector('.solution-content');
+            solutionContent.classList.toggle('show');
+        }
+    </script>
+</body>
+
+</html>
